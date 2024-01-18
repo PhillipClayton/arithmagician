@@ -1,0 +1,36 @@
+/* style.css */
+
+body {
+    background-color: #000;
+    color: #fff;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    text-align: center;
+    margin: 0;
+}
+
+h1 {
+    color: #00f;
+}
+
+#options {
+    margin: 20px 0;
+}
+
+label {
+    display: block;
+    margin: 10px 0;
+    color: #fff;
+}
+
+button {
+    background-color: #00f;
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+}
+
+#quiz {
+    margin-top: 20px;
+}
