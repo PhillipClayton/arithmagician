@@ -1,6 +1,44 @@
+var currentQuestionIndex = 0; // Track the index of the current question
+
 function engageQuiz() {
-    // Implement the logic to generate questions and initiate the quiz
-    console.log('Quiz engaged!');
+    // Initiate the quiz
+    // Get all checkboxes
+    console.log('Engaging quiz...');
+
+    // Get the selected radio button
+    var selectedRadioButton = document.querySelector('input[type=radio]:checked');
+
+    // Allow negative numbers?
+    var allowNegatives = document.getElementById('includeNegatives').checked;
+
+    // Generate a question based on the selected radio button
+    var question = generateQuestion(selectedRadioButton);
+
+    // Display the first question
+    displayQuestion(questions[currentQuestionIndex]);
+}
+
+function displayQuestion(question) {
+    // Display the question on the page
+    var questionContainer = document.getElementById('question-container');
+    questionContainer.innerHTML = question.questionString;
+}
+
+function generateQuestion(radioButton) {
+    // Generate a question based on the selected radio button
+    if (radioButton.id === 'addition') {
+        return generateAdditionQuestion(allowNegatives);
+    } else if (radioButton.id === 'subtraction') {
+        return generateSubtractionQuestion(allowNegatives);
+    } else if (radioButton.id === 'multiplication') {
+        return generateMultiplicationQuestion(allowNegatives);
+    } else if (radioButton.id === 'division') {
+        return generateDivisionQuestion(allowNegatives);
+    } else if (radioButton.id === 'squares') {
+        return generateSquaringQuestion(allowNegatives);
+    } else if (radioButton.id === 'squareRoots') {
+        return generateSquareRootQuestion(allowNegatives);
+    }
 }
 
 function checkAnswer() {
@@ -18,7 +56,7 @@ function energize() {
     console.log('Energizing...');
 }
 
-function generateAdditionQuestion() {
+function generateAdditionQuestion(allowNegatives) {
     // Generate random numbers between 0 and 20
     const num1 = Math.floor(Math.random() * 21);
     const num2 = Math.floor(Math.random() * 21);
@@ -36,7 +74,7 @@ function generateAdditionQuestion() {
     };
 }
 
-function generateMultiplicationQuestion() {
+function generateMultiplicationQuestion(allowNegatives) {
     // Generate random numbers between 0 and 12
     const num1 = Math.floor(Math.random() * 13);
     const num2 = Math.floor(Math.random() * 13);
@@ -54,7 +92,7 @@ function generateMultiplicationQuestion() {
     };
 }
 
-function generateSquaringQuestion() {
+function generateSquaringQuestion(allowNegatives) {
     // Generate a random number between 0 and 12
     const num = Math.floor(Math.random() * 13);
 
@@ -71,7 +109,7 @@ function generateSquaringQuestion() {
     };
 }
 
-function generateSubtractionQuestion(allowNegatives = true) {
+function generateSubtractionQuestion(allowNegatives) {
     // Generate random numbers between 0 and 20
     const num1 = Math.floor(Math.random() * 21);
     const num2 = Math.floor(Math.random() * 21);
@@ -95,7 +133,7 @@ function generateSubtractionQuestion(allowNegatives = true) {
     };
 }
 
-function generateDivisionQuestion() {
+function generateDivisionQuestion(allowNegatives) {
     // Generate random numbers between the products of 1 to 12
     const product1 = Math.floor(Math.random() * 12) + 1;
     const product2 = Math.floor(Math.random() * 12) + 1;
@@ -117,7 +155,7 @@ function generateDivisionQuestion() {
     };
 }
 
-function generateSquareRootQuestion() {
+function generateSquareRootQuestion(allowNegatives) {
     // Generate a random number between 0 and 12
     const num = Math.floor(Math.random() * 13);
 
