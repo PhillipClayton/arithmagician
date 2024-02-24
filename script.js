@@ -10,12 +10,25 @@ function engageQuiz() {
 
     // Allow negative numbers?
     var allowNegatives = document.getElementById('includeNegatives').checked;
+    if (allowNegatives === null) {
+        allowNegatives = false;
+    }
 
     // Generate a question based on the selected radio button
     var question = generateQuestion(selectedRadioButton);
 
-    // Display the first question
-    displayQuestion(questions[currentQuestionIndex]);
+    // Display the question with an answer input field
+    displayQuestion(question);
+    displayAnswerInputField();
+
+    // Add event listener to the answer input field
+    var answerInputField = document.getElementById('answer-container');
+    answerInputField.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            checkAnswer();
+        }
+    });
+
 }
 
 function displayQuestion(question) {
@@ -24,19 +37,25 @@ function displayQuestion(question) {
     questionContainer.innerHTML = question.questionString;
 }
 
+function displayAnswerInputField() {
+    // Display an input field for the user to enter their answer
+    var answerInputField = document.getElementById('answer-container');
+    answerInputField.innerHTML = '<input type="text" id="answer" placeholder="Enter your answer...">';
+}
+
 function generateQuestion(radioButton) {
     // Generate a question based on the selected radio button
     if (radioButton.id === 'addition') {
         return generateAdditionQuestion(allowNegatives);
-    } else if (radioButton.id === 'subtraction') {
+    } else if (radioButton.getElementById === 'subtraction') {
         return generateSubtractionQuestion(allowNegatives);
-    } else if (radioButton.id === 'multiplication') {
+    } else if (radioButton.getElementById === 'multiplication') {
         return generateMultiplicationQuestion(allowNegatives);
-    } else if (radioButton.id === 'division') {
+    } else if (radioButton.getElementById === 'division') {
         return generateDivisionQuestion(allowNegatives);
-    } else if (radioButton.id === 'squares') {
+    } else if (radioButton.getElementById === 'squares') {
         return generateSquaringQuestion(allowNegatives);
-    } else if (radioButton.id === 'squareRoots') {
+    } else if (radioButton.getElementById === 'squareRoots') {
         return generateSquareRootQuestion(allowNegatives);
     }
 }
@@ -44,6 +63,7 @@ function generateQuestion(radioButton) {
 function checkAnswer() {
     // Implement the logic to check the user's answer
     console.log('Checking answer...');
+
 }
 
 function proceedToNextQuestion() {
@@ -56,10 +76,17 @@ function energize() {
     console.log('Energizing...');
 }
 
+
+function generateRandomNumber(min, max) {
+    // Generate a random number between min and max (inclusive)
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 function generateAdditionQuestion(allowNegatives) {
-    // Generate random numbers between 0 and 20
-    const num1 = Math.floor(Math.random() * 21);
-    const num2 = Math.floor(Math.random() * 21);
+    // Generate random numbers between -20 and 20 if allowNegatives is true
+    const minNum = allowNegatives ? -20 : 0;
+    const maxNum = 20;
+    const num1 = generateRandomNumber(minNum, maxNum);
+    const num2 = generateRandomNumber(minNum, maxNum);
 
     // Create the question string
     const questionString = `${num1} + ${num2}`;
@@ -75,9 +102,11 @@ function generateAdditionQuestion(allowNegatives) {
 }
 
 function generateMultiplicationQuestion(allowNegatives) {
-    // Generate random numbers between 0 and 12
-    const num1 = Math.floor(Math.random() * 13);
-    const num2 = Math.floor(Math.random() * 13);
+    // Generate random numbers between -12 and 12 if allowNegatives is true
+    const minNum = allowNegatives ? -12 : 0;
+    const maxNum = 12;
+    const num1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+    const num2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
 
     // Create the question string
     const questionString = `${num1} * ${num2}`;
@@ -93,8 +122,10 @@ function generateMultiplicationQuestion(allowNegatives) {
 }
 
 function generateSquaringQuestion(allowNegatives) {
-    // Generate a random number between 0 and 12
-    const num = Math.floor(Math.random() * 13);
+    // Generate a random number between -12 and 12 if allowNegatives is true
+    const minNum = allowNegatives ? -12 : 0;
+    const maxNum = 12;
+    const num = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
 
     // Create the question string
     const questionString = `${num}^2`;
@@ -110,15 +141,11 @@ function generateSquaringQuestion(allowNegatives) {
 }
 
 function generateSubtractionQuestion(allowNegatives) {
-    // Generate random numbers between 0 and 20
-    const num1 = Math.floor(Math.random() * 21);
-    const num2 = Math.floor(Math.random() * 21);
-
-    // Ensure the first number is greater than or equal to the second
-    const minNum = allowNegatives ? 0 : num2;
-    const maxNum = 20;
-
-    const num3 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+    // Generate random numbers between -20 and 20 if allowNegatives is true
+    const minNum = allowNegatives ? -20 : 0;
+    const maxNum = 20;  
+    const num1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+    const num2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
 
     // Create the question string
     const questionString = `${num3} - ${num2}`;
@@ -134,13 +161,18 @@ function generateSubtractionQuestion(allowNegatives) {
 }
 
 function generateDivisionQuestion(allowNegatives) {
-    // Generate random numbers between the products of 1 to 12
-    const product1 = Math.floor(Math.random() * 12) + 1;
-    const product2 = Math.floor(Math.random() * 12) + 1;
+    // Generate random numbers between the products of -12 to 12 if allowNegatives is true
+    const minNum = allowNegatives ? -12 : 0;
+    const maxNum = 12;
+    do {
+        const product1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        const product2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+    }
+    while (product2 === 0 && product1 === 0); // Ensure at least one of the products is not zero
 
     // Calculate the dividend and divisor
     const dividend = product1 * product2;
-    const divisor = product2 !== 0 ? product2 : 1; // Ensure divisor is not zero
+    const divisor = product2 !== 0 ? product2 : product1; // Ensure divisor is not zero
 
     // Create the question string
     const questionString = `${dividend} ÷ ${divisor}`;
@@ -156,8 +188,10 @@ function generateDivisionQuestion(allowNegatives) {
 }
 
 function generateSquareRootQuestion(allowNegatives) {
-    // Generate a random number between 0 and 12
-    const num = Math.floor(Math.random() * 13);
+    // Generate a random number between -12 and 12 if allowNegatives is true
+    const minNum = allowNegatives ? -12 : 0;
+    const maxNum = 12;
+    const num = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
 
     // Calculate the square
     const square = num * num;
