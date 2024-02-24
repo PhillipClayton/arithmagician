@@ -55,3 +55,18 @@ button {
 #quiz {
     margin-top: 20px;
 }
+#question-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    background-color: #fff;
+    margin-top: 20px;
+    padding: 20px;
+    text-align: center;
+}
+
+#answer-input {
+    margin-top: 20px;
+}

@@ -1,8 +1,7 @@
-var currentQuestionIndex = 0; // Track the index of the current question
+var question;
 
 function engageQuiz() {
     // Initiate the quiz
-    // Get all checkboxes
     console.log('Engaging quiz...');
 
     // Get the selected radio button
@@ -15,7 +14,7 @@ function engageQuiz() {
     }
 
     // Generate a question based on the selected radio button
-    var question = generateQuestion(selectedRadioButton);
+    question = generateQuestion(selectedRadioButton, allowNegatives);
 
     // Display the question with an answer input field
     displayQuestion(question);
@@ -34,53 +33,54 @@ function engageQuiz() {
 function displayQuestion(question) {
     // Display the question on the page
     var questionContainer = document.getElementById('question-container');
-    questionContainer.innerHTML = question.questionString;
+    if (questionContainer !== null) {
+        questionContainer.innerHTML = question.questionString;
+    }
 }
 
 function displayAnswerInputField() {
     // Display an input field for the user to enter their answer
     var answerInputField = document.getElementById('answer-container');
-    answerInputField.innerHTML = '<input type="text" id="answer" placeholder="Enter your answer...">';
+    if (answerInputField !== null) {
+        answerInputField.innerHTML = '<input type="text" id="answer" placeholder="Enter your answer...">';
+    }
 }
 
-function generateQuestion(radioButton) {
+function generateQuestion(radioButton, negativeAllowed) {
     // Generate a question based on the selected radio button
     if (radioButton.id === 'addition') {
-        return generateAdditionQuestion(allowNegatives);
-    } else if (radioButton.getElementById === 'subtraction') {
-        return generateSubtractionQuestion(allowNegatives);
-    } else if (radioButton.getElementById === 'multiplication') {
-        return generateMultiplicationQuestion(allowNegatives);
-    } else if (radioButton.getElementById === 'division') {
-        return generateDivisionQuestion(allowNegatives);
-    } else if (radioButton.getElementById === 'squares') {
-        return generateSquaringQuestion(allowNegatives);
-    } else if (radioButton.getElementById === 'squareRoots') {
-        return generateSquareRootQuestion(allowNegatives);
+        return generateAdditionQuestion(negativeAllowed);
+    } else if (radioButton.id === 'subtraction') {
+        return generateSubtractionQuestion(negativeAllowed);
+    } else if (radioButton.id === 'multiplication') {
+        return generateMultiplicationQuestion(negativeAllowed);
+    } else if (radioButton.id === 'division') {
+        return generateDivisionQuestion(negativeAllowed);
+    } else if (radioButton.id === 'squares') {
+        return generateSquaringQuestion(negativeAllowed);
+    } else if (radioButton.id === 'squareRoots') {
+        return generateSquareRootQuestion(negativeAllowed);
     }
 }
 
 function checkAnswer() {
     // Implement the logic to check the user's answer
     console.log('Checking answer...');
-
+    var answerInputField = document.getElementById('answer');
+    var userAnswer = answerInputField.value;
+    var correctAnswer = question.answer;
+    if (userAnswer == correctAnswer) {
+        alert('Correct!');
+    } else {    
+        alert('Incorrect! The correct answer is ' + correctAnswer);
+    }  
 }
-
-function proceedToNextQuestion() {
-    // Implement the logic to proceed to the next question
-    console.log('Proceeding to the next question...');
-}
-
-function energize() {
-    // Implement the logic to reset the page
-    console.log('Energizing...');
-}
-
 
 function generateRandomNumber(min, max) {
     // Generate a random number between min and max (inclusive)
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
 function generateAdditionQuestion(allowNegatives) {
     // Generate random numbers between -20 and 20 if allowNegatives is true
     const minNum = allowNegatives ? -20 : 0;
