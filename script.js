@@ -78,18 +78,34 @@ function checkAnswer() {
     var userAnswer = answerInputField.value;
     var correctAnswer = question.answer;
     var answerContainer = document.getElementById('answer-container');
+
+     // Play a three-tone sequence based on whether all answers are correct
+     const context = new (window.AudioContext || window.webkitAudioContext)();
+     const duration_1 = 500; // Half a second
+     const duration_2 = 1500; // 1.5 seconds
+     const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
     
     if (userAnswer == correctAnswer) {
-        // answerContainer.style.backgroundColor = 'green';
         var nextAction = prompt('Correct! \n\nWhat would you like to do next? 1. Generate a similar question, 2. Select different criteria (reload page, default), 3. I\'m done for the day!', 'Enter 1, 2, or 3');
+        answerContainer.style.backgroundColor = 'green';
         if (nextAction == '1') {
             // Generate and display a similar question
             question = generateQuestion(lastRadioButton, lastNegativeAllowed);
             displayQuestion(question);
             answerInputField.value = ''; // Clear the answer input field
+            // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
+            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
+            setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
+            setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
+            setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
         } else if (nextAction == '2') {
+            // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
+            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
+            setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
+            setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
+            setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
             // Reload the page
-            location.reload();
+            setTimeout(() => { location.reload(); }, delay * 5);
         } else if (nextAction == '3') {
             // Celebrate!
             playCelebratoryMusic();
@@ -98,10 +114,40 @@ function checkAnswer() {
             location.reload();
         }
     } else {    
-        answerContainer.style.backgroundColor = 'red';
-        alert('Incorrect. The correct answer is ' + correctAnswer);
+        setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
+        setTimeout(() => { playTone(context, 392, duration_1); }, delay); // G4
+        setTimeout(() => { playTone(context, 369.99, duration_2, true); }, delay * 2); // F4#
+        setTimeout(() => { answerContainer.style.backgroundColor = 'red'; }, delay * 5);
+        setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 5);  
     }  
 }
+
+// Function to play a tone with a given frequency and duration, with optional oscillation
+function playTone(context, frequency, duration, oscillate = false) {
+    const oscillator = context.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+
+    if (oscillate) {
+        const gain = context.createGain();
+        gain.gain.value = 30; // The amplitude of the oscillation
+
+        const modulator = context.createOscillator();
+        modulator.type = 'sine';
+        modulator.frequency.value = 4; // The frequency of the oscillation
+
+        modulator.connect(gain);
+        gain.connect(oscillator.frequency);
+
+        modulator.start();
+        setTimeout(() => { modulator.stop(); }, duration);
+    }
+
+    oscillator.connect(context.destination);
+    oscillator.start();
+    setTimeout(() => { oscillator.stop(); }, duration);
+}
+
 
 function playCelebratoryMusic() {
     // Play celebratory music using the Web Audio API
