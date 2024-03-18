@@ -167,9 +167,12 @@ function generateDivisionQuestion(allowNegatives) {
     // Generate random numbers between the products of -12 to 12 if allowNegatives is true
     const minNum = allowNegatives ? -12 : 0;
     const maxNum = 12;
+    let product1 = 0;
+    let product2 = 1;
+    
     do {
-        const product1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-        const product2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        product1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        product2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
     }
     while (product2 === 0 && product1 === 0); // Ensure at least one of the products is not zero
 
