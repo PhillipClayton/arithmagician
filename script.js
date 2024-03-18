@@ -169,7 +169,7 @@ function generateDivisionQuestion(allowNegatives) {
     const maxNum = 12;
     let product1 = 0;
     let product2 = 1;
-    
+
     do {
         product1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
         product2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
@@ -194,19 +194,33 @@ function generateDivisionQuestion(allowNegatives) {
 }
 
 function generateSquareRootQuestion(allowNegatives) {
-    // Generate a random number between -12 and 12 if allowNegatives is true
-    const minNum = allowNegatives ? -12 : 0;
+    // Generate a random number between 0 and 12
     const maxNum = 12;
-    const num = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+    const num = Math.floor(Math.random() * (maxNum + 1))
+    let questionString = ''
+    let answer = ''
 
-    // Calculate the square
-    const square = num * num;
-
-    // Create the question string
-    const questionString = `√${num}`;
-
-    // Calculate the answer
-    const answer = num;
+    // Calculate the square and create the question and answer strings
+    // Only let the answer be imaginary SOMETIMES
+    if (allowNegatives) {
+        const imaginary_chance = Math.random();
+        if (imaginary_chance > 0.5) {
+            const square = num * num * -1;
+            questionString = `√${square}`;
+            answer = `${num}i`;
+        }
+        else {
+            const square = num * num;
+            questionString = `√${square}`;
+            answer = `${num}`;
+        }
+        
+    }
+    else {
+        const square = num * num;
+        questionString = `√${square}`;
+        answer = num;
+    }
 
     // Return an object with question and answer
     return {
