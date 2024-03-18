@@ -21,10 +21,12 @@ function engageQuiz() {
     displayAnswerInputField();
 
     // Add event listener to the answer input field
-    var answerInputField = document.getElementById('answer-container');
+    var answerInputField = document.getElementById('answer');
     answerInputField.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent the default form submission behavior
             checkAnswer();
+            answerInputField.value = ''; // Clear the answer input field
         }
     });
 
@@ -34,6 +36,7 @@ function displayQuestion(question) {
     // Display the question on the page
     var questionContainer = document.getElementById('question-container');
     if (questionContainer !== null) {
+        console.log('Displaying question...');
         questionContainer.innerHTML = question.questionString;
     }
 }
@@ -148,10 +151,10 @@ function generateSubtractionQuestion(allowNegatives) {
     const num2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
 
     // Create the question string
-    const questionString = `${num3} - ${num2}`;
+    const questionString = `${num1} - ${num2}`;
 
     // Calculate the answer
-    const answer = num3 - num2;
+    const answer = num1 - num2;
 
     // Return an object with question and answer
     return {
