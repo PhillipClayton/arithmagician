@@ -109,7 +109,7 @@ function checkAnswer() {
         } else if (nextAction == '3') {
             // Celebrate!
             playCelebratoryMusic();
-            generateConfetti();
+            generateConfetti(delay);
         } else {
             location.reload();
         }
@@ -151,20 +151,30 @@ function playTone(context, frequency, duration, oscillate = false) {
 
 function playCelebratoryMusic() {
     // Play celebratory music using the Web Audio API
-    var context = new AudioContext();
-    var o = context.createOscillator();
-    var g = context.createGain();
-    o.connect(g);
-    o.frequency.value = 440;
-    g.connect(context.destination);
-    o.start(0);
+    // Four descending tones forming an A-major scale (A5, G#5, F#5, E5, D5, C#5, B4, A4)
+    // Play a three-tone sequence based on whether all answers are correct
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const duration_1 = 500; // Half a second
+    const duration_2 = 1500; // 1.5 seconds
+    const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
+
+    setTimeout(() => { playTone(context, 880, duration_1); }, 0); // A5
+    setTimeout(() => { playTone(context, 830.61, duration_1); }, delay); // G#5
+    setTimeout(() => { playTone(context, 739.99, duration_1); }, delay * 2); // F#5
+    setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 3); // E5
+    setTimeout(() => { playTone(context, 587.33, duration_1); }, delay * 4); // D5
+    setTimeout(() => { playTone(context, 554.37, duration_1); }, delay * 5); // C#5
+    setTimeout(() => { playTone(context, 493.88, duration_1); }, delay * 6); // B4
+    setTimeout(() => { playTone(context, 440, duration_2); }, delay * 7); // A4
 }
 
-function generateConfetti() {
+function generateConfetti(delay_standard) {
     // Generate confetti using confetti-js
     var confettiSettings = { target: 'my-canvas' };
     var confetti = new ConfettiGenerator(confettiSettings);
     confetti.render();
+    setTimeout(() => { confetti.clear(); }, delay_standard * 9);
+    setTimeout(() => { location.reload(); }, delay_standard * 9);
 }
 
 function generateRandomNumber(min, max) {
