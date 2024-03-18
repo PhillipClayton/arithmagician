@@ -1,4 +1,6 @@
 var question;
+let lastRadioButton;
+let lastNegativeAllowed;
 
 function engageQuiz() {
     // Initiate the quiz
@@ -51,6 +53,9 @@ function displayAnswerInputField() {
 
 function generateQuestion(radioButton, negativeAllowed) {
     // Generate a question based on the selected radio button
+    lastRadioButton = radioButton;
+    lastNegativeAllowed = negativeAllowed;
+
     if (radioButton.id === 'addition') {
         return generateAdditionQuestion(negativeAllowed);
     } else if (radioButton.id === 'subtraction') {
@@ -72,11 +77,48 @@ function checkAnswer() {
     var answerInputField = document.getElementById('answer');
     var userAnswer = answerInputField.value;
     var correctAnswer = question.answer;
+    var answerContainer = document.getElementById('answer-container');
+    
     if (userAnswer == correctAnswer) {
-        alert('Correct!');
+        // answerContainer.style.backgroundColor = 'green';
+        var nextAction = prompt('Correct! \n\nWhat would you like to do next? 1. Generate a similar question, 2. Select different criteria (reload page, default), 3. I\'m done for the day!', 'Enter 1, 2, or 3');
+        if (nextAction == '1') {
+            // Generate and display a similar question
+            question = generateQuestion(lastRadioButton, lastNegativeAllowed);
+            displayQuestion(question);
+            answerInputField.value = ''; // Clear the answer input field
+        } else if (nextAction == '2') {
+            // Reload the page
+            location.reload();
+        } else if (nextAction == '3') {
+            // Celebrate!
+            playCelebratoryMusic();
+            generateConfetti();
+        } else {
+            location.reload();
+        }
     } else {    
-        alert('Incorrect! The correct answer is ' + correctAnswer);
+        answerContainer.style.backgroundColor = 'red';
+        alert('Incorrect. The correct answer is ' + correctAnswer);
     }  
+}
+
+function playCelebratoryMusic() {
+    // Play celebratory music using the Web Audio API
+    var context = new AudioContext();
+    var o = context.createOscillator();
+    var g = context.createGain();
+    o.connect(g);
+    o.frequency.value = 440;
+    g.connect(context.destination);
+    o.start(0);
+}
+
+function generateConfetti() {
+    // Generate confetti using confetti-js
+    var confettiSettings = { target: 'my-canvas' };
+    var confetti = new ConfettiGenerator(confettiSettings);
+    confetti.render();
 }
 
 function generateRandomNumber(min, max) {

@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/confetti-js@0.0.18/dist/index.min.js"></script>
     <script src="script.js"></script>
     <title>Arithmagician</title>
 </head>
 <body>
     <h1>Arithmagician</h1>
-
+    
     <div id="options">
         <label><input type="radio" name="operation" id="addition"> Addition</label>
         <label><input type="radio" name="operation" id="subtraction"> Subtraction</label>
@@ -21,7 +22,7 @@
         <label><input type="checkbox" id="includeNegatives"> Include Negatives</label>
     </div>
 
-    <button onclick="engageQuiz()">Engage</button>
+    <button onclick="engageQuiz()">Generate Question</button>
     <button onclick="checkAnswer()">Check Answer</button>
 
     <div id="question-container">
@@ -30,4 +31,6 @@
     <div id="answer-container">
         <!-- Dynamic content will be placed here -->
     </div>
+
+    <canvas id="my-canvas"></canvas>
 </body>
