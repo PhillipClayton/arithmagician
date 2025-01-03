@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var questionCountInput = document.getElementById('questionCount');
         var questionCount = parseInt(questionCountInput.value);
 
-        if (isNaN(questionCount) || questionCount < 1) {
+        if (!Number.isInteger(questionCount) || questionCount <= 0) {
             alert('Please enter a positive integer for the number of questions.');
             return;
         } else {

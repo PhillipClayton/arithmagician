@@ -10,11 +10,9 @@
 input[type="radio"],
 input[type="number"],
 input[type="checkbox"] {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-block;
+    vertical-align: middle; /* Aligns the input elements with the text */
     margin-right: 10px; /* Optional: Adds some space between the elements */
-    text-align: center; /* Center aligns the elements */
 }
 
 input[type="radio"],
