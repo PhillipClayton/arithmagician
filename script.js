@@ -1,4 +1,4 @@
-var question;
+var questions = [];
 let lastRadioButton;
 let lastNegativeAllowed;
 
@@ -6,8 +6,9 @@ function engageQuiz() {
     // Initiate the quiz
     console.log('Engaging quiz...');
 
-    // Get the selected radio button
-    var selectedRadioButton = document.querySelector('input[type=radio]:checked');
+    // Get the selected checkboxes
+    var selectedCheckboxes = document.querySelectorAll('input[type=checkbox]:checked');
+    var selectedOperations = Array.from(selectedCheckboxes).map(cb => cb.id);
 
     // Allow negative numbers?
     var allowNegatives = document.getElementById('includeNegatives').checked;
@@ -15,11 +16,15 @@ function engageQuiz() {
         allowNegatives = false;
     }
 
-    // Generate a question based on the selected radio button
-    question = generateQuestion(selectedRadioButton, allowNegatives);
+    // Generate 50 questions based on the selected checkboxes
+    questions = [];
+    for (let i = 0; i < 50; i++) {
+        var question = generateQuestion(selectedOperations, allowNegatives);
+        questions.push(question);
+    }
 
-    // Display the question with an answer input field
-    displayQuestion(question);
+    // Display the first question with an answer input field
+    displayQuestion(questions[0]);
     displayAnswerInputField();
 
     // Add event listener to the answer input field
@@ -31,7 +36,6 @@ function engageQuiz() {
             answerInputField.value = ''; // Clear the answer input field
         }
     });
-
 }
 
 function displayQuestion(question) {
@@ -51,22 +55,25 @@ function displayAnswerInputField() {
     }
 }
 
-function generateQuestion(radioButton, negativeAllowed) {
-    // Generate a question based on the selected radio button
-    lastRadioButton = radioButton;
+function generateQuestion(selectedOperations, negativeAllowed) {
+    // Randomly select an operation from the selected checkboxes
+    var randomIndex = Math.floor(Math.random() * selectedOperations.length);
+    var selectedOperation = selectedOperations[randomIndex];
+
+    lastRadioButton = selectedOperation;
     lastNegativeAllowed = negativeAllowed;
 
-    if (radioButton.id === 'addition') {
+    if (selectedOperation === 'addition') {
         return generateAdditionQuestion(negativeAllowed);
-    } else if (radioButton.id === 'subtraction') {
+    } else if (selectedOperation === 'subtraction') {
         return generateSubtractionQuestion(negativeAllowed);
-    } else if (radioButton.id === 'multiplication') {
+    } else if (selectedOperation === 'multiplication') {
         return generateMultiplicationQuestion(negativeAllowed);
-    } else if (radioButton.id === 'division') {
+    } else if (selectedOperation === 'division') {
         return generateDivisionQuestion(negativeAllowed);
-    } else if (radioButton.id === 'squares') {
+    } else if (selectedOperation === 'squares') {
         return generateSquaringQuestion(negativeAllowed);
-    } else if (radioButton.id === 'squareRoots') {
+    } else if (selectedOperation === 'squareRoots') {
         return generateSquareRootQuestion(negativeAllowed);
     }
 }
@@ -76,23 +83,27 @@ function checkAnswer() {
     console.log('Checking answer...');
     var answerInputField = document.getElementById('answer');
     var userAnswer = answerInputField.value;
-    var correctAnswer = question.answer;
+    var correctAnswer = questions[0].answer;
     var answerContainer = document.getElementById('answer-container');
 
-     // Play a three-tone sequence based on whether all answers are correct
-     const context = new (window.AudioContext || window.webkitAudioContext)();
-     const duration_1 = 500; // Half a second
-     const duration_2 = 1500; // 1.5 seconds
-     const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
-    
+    // Play a three-tone sequence based on whether all answers are correct
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const duration_1 = 500; // Half a second
+    const duration_2 = 1500; // 1.5 seconds
+    const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
+
     if (userAnswer == correctAnswer) {
         var nextAction = prompt('Correct! \n\nWhat would you like to do next? 1. Generate a similar question, 2. Select different criteria (reload page, default), 3. I\'m done for the day!', 'Enter 1, 2, or 3');
         answerContainer.style.backgroundColor = 'green';
         if (nextAction == '1') {
             // Generate and display a similar question
-            question = generateQuestion(lastRadioButton, lastNegativeAllowed);
-            displayQuestion(question);
-            answerInputField.value = ''; // Clear the answer input field
+            questions.shift();
+            if (questions.length > 0) {
+                displayQuestion(questions[0]);
+                answerInputField.value = ''; // Clear the answer input field
+            } else {
+                alert('You have completed all 50 questions!');
+            }
             // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
             setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
             setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
@@ -113,13 +124,13 @@ function checkAnswer() {
         } else {
             location.reload();
         }
-    } else {    
+    } else {
         setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
         setTimeout(() => { playTone(context, 392, duration_1); }, delay); // G4
         setTimeout(() => { playTone(context, 369.99, duration_2, true); }, delay * 2); // F4#
         setTimeout(() => { answerContainer.style.backgroundColor = 'red'; }, delay * 5);
-        setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 5);  
-    }  
+        setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 5);
+    }
 }
 
 // Function to play a tone with a given frequency and duration, with optional oscillation
