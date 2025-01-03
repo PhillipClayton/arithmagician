@@ -1,6 +1,10 @@
 var questions = [];
+var questionCounter = 0;
 let lastRadioButton;
 let lastNegativeAllowed;
+let currentQuestion;
+let selectedOperations = [];
+let allowNegatives = false;
 
 function engageQuiz() {
     // Initiate the quiz
@@ -8,23 +12,20 @@ function engageQuiz() {
 
     // Get the selected checkboxes
     var selectedCheckboxes = document.querySelectorAll('input[type=checkbox]:checked');
-    var selectedOperations = Array.from(selectedCheckboxes).map(cb => cb.id);
+    selectedOperations = Array.from(selectedCheckboxes).map(cb => cb.id);
 
     // Allow negative numbers?
-    var allowNegatives = document.getElementById('includeNegatives').checked;
+    allowNegatives = document.getElementById('includeNegatives').checked;
     if (allowNegatives === null) {
         allowNegatives = false;
     }
 
-    // Generate 50 questions based on the selected checkboxes
-    questions = [];
-    for (let i = 0; i < 50; i++) {
-        var question = generateQuestion(selectedOperations, allowNegatives);
-        questions.push(question);
-    }
+    // Initialize the question counter to 50
+    questionCounter = 50;
 
-    // Display the first question with an answer input field
-    displayQuestion(questions[0]);
+    // Generate and display the first question
+    currentQuestion = generateQuestion(selectedOperations, allowNegatives);
+    displayQuestion(currentQuestion);
     displayAnswerInputField();
 
     // Add event listener to the answer input field
@@ -60,8 +61,8 @@ function generateQuestion(selectedOperations, negativeAllowed) {
     var randomIndex = Math.floor(Math.random() * selectedOperations.length);
     var selectedOperation = selectedOperations[randomIndex];
 
-    lastRadioButton = selectedOperation;
-    lastNegativeAllowed = negativeAllowed;
+    // lastRadioButton = selectedOperation;
+    // lastNegativeAllowed = negativeAllowed;
 
     if (selectedOperation === 'addition') {
         return generateAdditionQuestion(negativeAllowed);
@@ -75,6 +76,12 @@ function generateQuestion(selectedOperations, negativeAllowed) {
         return generateSquaringQuestion(negativeAllowed);
     } else if (selectedOperation === 'squareRoots') {
         return generateSquareRootQuestion(negativeAllowed);
+    } else {
+        // Return a default question if no operation is selected
+        return {
+            questionString: 'No operation selected',
+            answer: ''
+        };
     }
 }
 
@@ -83,7 +90,7 @@ function checkAnswer() {
     console.log('Checking answer...');
     var answerInputField = document.getElementById('answer');
     var userAnswer = answerInputField.value;
-    var correctAnswer = questions[0].answer;
+    var correctAnswer = currentQuestion.answer;
     var answerContainer = document.getElementById('answer-container');
 
     // Play a three-tone sequence based on whether all answers are correct
@@ -93,37 +100,21 @@ function checkAnswer() {
     const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
 
     if (userAnswer == correctAnswer) {
-        var nextAction = prompt('Correct! \n\nWhat would you like to do next? 1. Generate a similar question, 2. Select different criteria (reload page, default), 3. I\'m done for the day!', 'Enter 1, 2, or 3');
+        alert('Correct!');
         answerContainer.style.backgroundColor = 'green';
-        if (nextAction == '1') {
-            // Generate and display a similar question
-            questions.shift();
-            if (questions.length > 0) {
-                displayQuestion(questions[0]);
-                answerInputField.value = ''; // Clear the answer input field
-            } else {
-                alert('You have completed all 50 questions!');
-            }
-            // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
-            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
-            setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
-            setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
-            setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
-        } else if (nextAction == '2') {
-            // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
-            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
-            setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
-            setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
-            setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
-            // Reload the page
-            setTimeout(() => { location.reload(); }, delay * 5);
-        } else if (nextAction == '3') {
-            // Celebrate!
-            playCelebratoryMusic();
-            generateConfetti(delay);
+        questionCounter--;
+        if (questionCounter > 0) {
+            currentQuestion = generateQuestion(selectedOperations, allowNegatives);
+            displayQuestion(currentQuestion);
+            answerInputField.value = ''; // Clear the answer input field
         } else {
-            location.reload();
+            alert('You have completed all 50 questions!');
         }
+        // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
+        setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
+        setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
+        setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
+        setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
     } else {
         setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
         setTimeout(() => { playTone(context, 392, duration_1); }, delay); // G4
