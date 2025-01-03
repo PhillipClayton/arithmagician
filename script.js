@@ -1,188 +1,163 @@
-var questions = [];
-var questionCounter = 0;
-let lastRadioButton;
-let lastNegativeAllowed;
-let currentQuestion;
-let selectedOperations = [];
-let allowNegatives = false;
+document.addEventListener('DOMContentLoaded', function() {
+    let allowNegatives = false;
+    let numberOfQuestions = 50;
+    let selectedOperations = [];
+    let currentQuestion;
 
-function engageQuiz() {
-    // Initiate the quiz
-    console.log('Engaging quiz...');
+    function engageQuiz() {
+        // Initiate the quiz
+        console.log('Engaging quiz...');
 
-    // Get the selected checkboxes
-    var selectedCheckboxes = document.querySelectorAll('input[type=checkbox]:checked');
-    selectedOperations = Array.from(selectedCheckboxes).map(cb => cb.id);
+        // Get the selected checkboxes
+        var selectedCheckboxes = document.querySelectorAll('input[type=checkbox]:checked');
+        selectedOperations = Array.from(selectedCheckboxes).map(cb => cb.id);
 
-    // Allow negative numbers?
-    allowNegatives = document.getElementById('includeNegatives').checked;
-    if (allowNegatives === null) {
-        allowNegatives = false;
-    }
-
-    // Initialize the question counter to 50
-    questionCounter = 50;
-
-    // Generate and display the first question
-    currentQuestion = generateQuestion(selectedOperations, allowNegatives);
-    displayQuestion(currentQuestion);
-    displayAnswerInputField();
-
-    // Add event listener to the answer input field
-    var answerInputField = document.getElementById('answer');
-    answerInputField.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault(); // Prevent the default form submission behavior
-            checkAnswer();
-            answerInputField.value = ''; // Clear the answer input field
+        // Allow negative numbers?
+        allowNegatives = document.getElementById('includeNegatives').checked;
+        if (allowNegatives === null) {
+            allowNegatives = false;
         }
-    });
-}
 
-function displayQuestion(question) {
-    // Display the question on the page
-    var questionContainer = document.getElementById('question-container');
-    if (questionContainer !== null) {
-        console.log('Displaying question...');
-        questionContainer.innerHTML = question.questionString;
-    }
-}
+        // Initialize the question counter based off of number input field; default to 50
+        var questionCountInput = document.getElementById('questionCount');
+        var questionCount = parseInt(questionCountInput.value);
 
-function displayAnswerInputField() {
-    // Display an input field for the user to enter their answer
-    var answerInputField = document.getElementById('answer-container');
-    if (answerInputField !== null) {
-        answerInputField.innerHTML = '<input type="text" id="answer" placeholder="Enter your answer...">';
-    }
-}
-
-function generateQuestion(selectedOperations, negativeAllowed) {
-    // Randomly select an operation from the selected checkboxes
-    var randomIndex = Math.floor(Math.random() * selectedOperations.length);
-    var selectedOperation = selectedOperations[randomIndex];
-
-    // lastRadioButton = selectedOperation;
-    // lastNegativeAllowed = negativeAllowed;
-
-    if (selectedOperation === 'addition') {
-        return generateAdditionQuestion(negativeAllowed);
-    } else if (selectedOperation === 'subtraction') {
-        return generateSubtractionQuestion(negativeAllowed);
-    } else if (selectedOperation === 'multiplication') {
-        return generateMultiplicationQuestion(negativeAllowed);
-    } else if (selectedOperation === 'division') {
-        return generateDivisionQuestion(negativeAllowed);
-    } else if (selectedOperation === 'squares') {
-        return generateSquaringQuestion(negativeAllowed);
-    } else if (selectedOperation === 'squareRoots') {
-        return generateSquareRootQuestion(negativeAllowed);
-    } else {
-        // Return a default question if no operation is selected
-        return {
-            questionString: 'No operation selected',
-            answer: ''
-        };
-    }
-}
-
-function checkAnswer() {
-    // Implement the logic to check the user's answer
-    console.log('Checking answer...');
-    var answerInputField = document.getElementById('answer');
-    var userAnswer = answerInputField.value;
-    var correctAnswer = currentQuestion.answer;
-    var answerContainer = document.getElementById('answer-container');
-
-    // Play a three-tone sequence based on whether all answers are correct
-    const context = new (window.AudioContext || window.webkitAudioContext)();
-    const duration_1 = 500; // Half a second
-    const duration_2 = 1500; // 1.5 seconds
-    const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
-
-    if (userAnswer == correctAnswer) {
-        alert('Correct!');
-        answerContainer.style.backgroundColor = 'green';
-        questionCounter--;
-        if (questionCounter > 0) {
-            currentQuestion = generateQuestion(selectedOperations, allowNegatives);
-            displayQuestion(currentQuestion);
-            answerInputField.value = ''; // Clear the answer input field
+        if (isNaN(questionCount) || questionCount < 1) {
+            alert('Please enter a positive integer for the number of questions.');
+            return;
         } else {
-            alert('You have completed all 50 questions!');
+            numberOfQuestions = questionCount;
         }
-        // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
-        setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
-        setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
-        setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
-        setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
-    } else {
-        setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
-        setTimeout(() => { playTone(context, 392, duration_1); }, delay); // G4
-        setTimeout(() => { playTone(context, 369.99, duration_2, true); }, delay * 2); // F4#
-        setTimeout(() => { answerContainer.style.backgroundColor = 'red'; }, delay * 5);
-        setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 5);
-    }
-}
 
-// Function to play a tone with a given frequency and duration, with optional oscillation
-function playTone(context, frequency, duration, oscillate = false) {
-    const oscillator = context.createOscillator();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = frequency;
+        // Generate and display the first question
+        currentQuestion = generateQuestion(selectedOperations, allowNegatives);
+        displayQuestion(currentQuestion);
+        displayAnswerInputField();
 
-    if (oscillate) {
-        const gain = context.createGain();
-        gain.gain.value = 30; // The amplitude of the oscillation
-
-        const modulator = context.createOscillator();
-        modulator.type = 'sine';
-        modulator.frequency.value = 4; // The frequency of the oscillation
-
-        modulator.connect(gain);
-        gain.connect(oscillator.frequency);
-
-        modulator.start();
-        setTimeout(() => { modulator.stop(); }, duration);
+        // Add event listener to the answer input field
+        var answerInputField = document.getElementById('answer');
+        answerInputField.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent the default form submission behavior
+                checkAnswer();
+                answerInputField.value = ''; // Clear the answer input field
+            }
+        });
     }
 
-    oscillator.connect(context.destination);
-    oscillator.start();
-    setTimeout(() => { oscillator.stop(); }, duration);
-}
+    function displayQuestion(question) {
+        // Display the question on the page
+        var questionContainer = document.getElementById('question-container');
+        if (questionContainer !== null) {
+            console.log('Displaying question...');
+            questionContainer.innerHTML = question.questionString;
+        }
+    }
 
+    function displayAnswerInputField() {
+        // Display an input field for the user to enter their answer
+        var answerInputField = document.getElementById('answer-container');
+        if (answerInputField !== null) {
+            answerInputField.innerHTML = '<input type="text" id="answer" placeholder="Enter your answer...">';
+        }
+    }
 
-function playCelebratoryMusic() {
-    // Play celebratory music using the Web Audio API
-    // Four descending tones forming an A-major scale (A5, G#5, F#5, E5, D5, C#5, B4, A4)
-    // Play a three-tone sequence based on whether all answers are correct
-    const context = new (window.AudioContext || window.webkitAudioContext)();
-    const duration_1 = 500; // Half a second
-    const duration_2 = 1500; // 1.5 seconds
-    const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
+    function generateQuestion(selectedOperations, negativeAllowed) {
+        // Randomly select an operation from the selected checkboxes
+        var randomIndex = Math.floor(Math.random() * selectedOperations.length);
+        var selectedOperation = selectedOperations[randomIndex];
 
-    setTimeout(() => { playTone(context, 880, duration_1); }, 0); // A5
-    setTimeout(() => { playTone(context, 830.61, duration_1); }, delay); // G#5
-    setTimeout(() => { playTone(context, 739.99, duration_1); }, delay * 2); // F#5
-    setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 3); // E5
-    setTimeout(() => { playTone(context, 587.33, duration_1); }, delay * 4); // D5
-    setTimeout(() => { playTone(context, 554.37, duration_1); }, delay * 5); // C#5
-    setTimeout(() => { playTone(context, 493.88, duration_1); }, delay * 6); // B4
-    setTimeout(() => { playTone(context, 440, duration_2); }, delay * 7); // A4
-}
+        if (selectedOperation === 'addition') {
+            return generateAdditionQuestion(negativeAllowed);
+        } else if (selectedOperation === 'subtraction') {
+            return generateSubtractionQuestion(negativeAllowed);
+        } else if (selectedOperation === 'multiplication') {
+            return generateMultiplicationQuestion(negativeAllowed);
+        } else if (selectedOperation === 'division') {
+            return generateDivisionQuestion(negativeAllowed);
+        } else if (selectedOperation === 'squares') {
+            return generateSquaringQuestion(negativeAllowed);
+        } else if (selectedOperation === 'squareRoots') {
+            return generateSquareRootQuestion(negativeAllowed);
+        } else {
+            // Return a default question if no operation is selected
+            return {
+                questionString: 'No operation selected',
+                answer: ''
+            };
+        }
+    }
 
-function generateConfetti(delay_standard) {
-    // Generate confetti using confetti-js
-    var confettiSettings = { target: 'my-canvas' };
-    var confetti = new ConfettiGenerator(confettiSettings);
-    confetti.render();
-    setTimeout(() => { confetti.clear(); }, delay_standard * 9);
-    setTimeout(() => { location.reload(); }, delay_standard * 9);
-}
+    function checkAnswer() {
+        // Implement the logic to check the user's answer
+        console.log('Checking answer...');
+        var answerInputField = document.getElementById('answer');
+        var userAnswer = answerInputField.value;
+        var correctAnswer = currentQuestion.answer;
+        var answerContainer = document.getElementById('answer-container');
 
-function generateRandomNumber(min, max) {
-    // Generate a random number between min and max (inclusive)
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+        // Play a three-tone sequence based on whether all answers are correct
+        const context = new (window.AudioContext || window.webkitAudioContext)();
+        const duration_1 = 500; // Half a second
+        const duration_2 = 1500; // 1.5 seconds
+        const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
+
+        if (userAnswer == correctAnswer) {
+            alert('Correct!');
+            answerContainer.style.backgroundColor = 'green';
+            numberOfQuestions--;
+            if (numberOfQuestions > 0) {
+                currentQuestion = generateQuestion(selectedOperations, allowNegatives);
+                displayQuestion(currentQuestion);
+                answerInputField.value = ''; // Clear the answer input field
+            } else {
+                alert('You have completed all questions!');
+            }
+            // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
+            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
+            setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
+            setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
+            setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
+        } else {
+            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
+            setTimeout(() => { playTone(context, 392, duration_1); }, delay); // G4
+            setTimeout(() => { playTone(context, 369.99, duration_2, true); }, delay * 2); // F4#
+            setTimeout(() => { answerContainer.style.backgroundColor = 'red'; }, delay * 5);
+            setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 5);
+        }
+    }
+
+    // Function to play a tone with a given frequency and duration, with optional oscillation
+    function playTone(context, frequency, duration, oscillate = false) {
+        const oscillator = context.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+
+        if (oscillate) {
+            const gain = context.createGain();
+            gain.gain.value = 30; // The amplitude of the oscillation
+
+            const modulator = context.createOscillator();
+            modulator.type = 'sine';
+            modulator.frequency.value = 4; // The frequency of the oscillation
+
+            modulator.connect(gain.gain);
+            modulator.start();
+
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+        } else {
+            oscillator.connect(context.destination);
+        }
+
+        oscillator.start();
+        oscillator.stop(context.currentTime + duration / 1000);
+    }
+
+    // Expose functions to the global scope
+    window.engageQuiz = engageQuiz;
+    window.checkAnswer = checkAnswer;
+});
 
 function generateAdditionQuestion(allowNegatives) {
     // Generate random numbers between -20 and 20 if allowNegatives is true
@@ -327,4 +302,37 @@ function generateSquareRootQuestion(allowNegatives) {
         questionString: questionString,
         answer: answer
     };
+}
+
+function playCelebratoryMusic() {
+    // Play celebratory music using the Web Audio API
+    // Four descending tones forming an A-major scale (A5, G#5, F#5, E5, D5, C#5, B4, A4)
+    // Play a three-tone sequence based on whether all answers are correct
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const duration_1 = 500; // Half a second
+    const duration_2 = 1500; // 1.5 seconds
+    const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
+
+    setTimeout(() => { playTone(context, 880, duration_1); }, 0); // A5
+    setTimeout(() => { playTone(context, 830.61, duration_1); }, delay); // G#5
+    setTimeout(() => { playTone(context, 739.99, duration_1); }, delay * 2); // F#5
+    setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 3); // E5
+    setTimeout(() => { playTone(context, 587.33, duration_1); }, delay * 4); // D5
+    setTimeout(() => { playTone(context, 554.37, duration_1); }, delay * 5); // C#5
+    setTimeout(() => { playTone(context, 493.88, duration_1); }, delay * 6); // B4
+    setTimeout(() => { playTone(context, 440, duration_2); }, delay * 7); // A4
+}
+
+function generateConfetti(delay_standard) {
+    // Generate confetti using confetti-js
+    var confettiSettings = { target: 'my-canvas' };
+    var confetti = new ConfettiGenerator(confettiSettings);
+    confetti.render();
+    setTimeout(() => { confetti.clear(); }, delay_standard * 9);
+    setTimeout(() => { location.reload(); }, delay_standard * 9);
+}
+
+function generateRandomNumber(min, max) {
+    // Generate a random number between min and max (inclusive)
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
