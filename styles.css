@@ -8,21 +8,16 @@
 }
 
 input[type="radio"],
+input[type="number"],
 input[type="checkbox"] {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-block;
+    vertical-align: middle; /* Aligns the input elements with the text */
     margin-right: 10px; /* Optional: Adds some space between the elements */
-    text-align: center; /* Center aligns the elements */
 }
 
-/* Add the following CSS code */
-input[type="radio"] {
-    margin-left: auto;
-    margin-right: auto;
-}
-
-input[type="checkbox"] {
+input[type="radio"],
+input[type="checkbox"],
+input[type="number"] {
     margin-left: auto;
     margin-right: auto;
 }
