@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initiate the quiz
         console.log('Engaging quiz...');
 
-        // Get the selected checkboxes
-        var selectedCheckboxes = document.querySelectorAll('input[type=checkbox]:checked');
+        // Get the selected operation checkboxes only (exclude the "Include Negatives" control)
+        var selectedCheckboxes = document.querySelectorAll('input[name="operation"]:checked');
         selectedOperations = Array.from(selectedCheckboxes).map(cb => cb.id);
 
         // Guard: at least one operation must be selected
@@ -42,14 +42,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Allow negative numbers?
-        allowNegatives = document.getElementById('includeNegatives').checked;
-        if (allowNegatives === null) {
-            allowNegatives = false;
-        }
+        var negativesCheckbox = document.getElementById('includeNegatives');
+        allowNegatives = negativesCheckbox ? negativesCheckbox.checked : false;
 
         // Initialize the question counter based off of number input field; default to 50
         var questionCountInput = document.getElementById('questionCount');
-        var questionCount = parseInt(questionCountInput.value);
+        var questionCount = questionCountInput ? parseInt(questionCountInput.value) : NaN;
 
         if (!Number.isInteger(questionCount) || questionCount <= 0) {
             alert('Please enter a positive integer for the number of questions.');
@@ -70,9 +68,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (e.key === 'Enter') {
                     e.preventDefault(); // Prevent the default form submission behavior
                     checkAnswer();
-                    answerInputField.value = ''; // Clear the answer input field
                 }
             };
+            // Focus the input so users can start typing immediately
+            answerInputField.focus();
         }
     }
 
@@ -142,7 +141,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        var userAnswer = answerInputField.value;
+        var rawUserAnswer = answerInputField.value;
+        var userAnswer = rawUserAnswer !== null && rawUserAnswer !== undefined ? String(rawUserAnswer).trim() : '';
+        if (userAnswer === '') {
+            alert('Please enter an answer.');
+            return;
+        }
+
         var correctAnswer = currentQuestion.answer;
         var answerContainer = document.getElementById('answer-container');
 
@@ -154,14 +159,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const duration_2 = 1500; // 1.5 seconds
         const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
 
-        if (userAnswer == correctAnswer) {
-            alert('Correct!');
+        // Normalize comparison so numbers and strings compare sensibly
+        let isCorrect = false;
+        if (typeof correctAnswer === 'number') {
+            // Accept numeric input that matches exactly
+            const parsed = Number(userAnswer);
+            isCorrect = !isNaN(parsed) && parsed === correctAnswer;
+        } else {
+            // Compare as trimmed strings
+            isCorrect = userAnswer === String(correctAnswer);
+        }
+
+        if (isCorrect) {
             if (answerContainer) answerContainer.style.backgroundColor = 'green';
             numberOfQuestions--;
             if (numberOfQuestions > 0) {
                 currentQuestion = generateQuestion(selectedOperations, allowNegatives);
                 displayQuestion(currentQuestion);
-                answerInputField.value = ''; // Clear the answer input field
+                // Clear the input for the next question and focus
+                answerInputField.value = '';
+                answerInputField.focus();
             } else {
                 alert('You have completed all questions!');
             }
@@ -184,6 +201,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 dur: duration_2,
                 start: delay * 3
             }], context);
+
+            // Brief feedback for correct answer
+            setTimeout(() => { alert('Correct!'); }, 50);
         } else {
             if (answerContainer) answerContainer.style.backgroundColor = 'red';
 
@@ -405,7 +425,7 @@ function generateSquareRootQuestion(allowNegatives) {
     else {
         const square = num * num;
         questionString = `√${square}`;
-        answer = num;
+        answer = String(num);
     }
 
     // Return an object with question and answer
