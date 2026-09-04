@@ -2,7 +2,30 @@ document.addEventListener('DOMContentLoaded', function() {
     let allowNegatives = false;
     let numberOfQuestions = 50;
     let selectedOperations = [];
-    let currentQuestion;
+    let currentQuestion = null;
+
+    // Simple audio manager to avoid overlapping sounds
+    let audioContext = null;
+    let activeNodes = []; // store oscillators and modulators so we can stop them
+
+    function ensureAudioContext() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return audioContext;
+    }
+
+    function stopAllSound() {
+        try {
+            // Stop all active oscillators/modulators and disconnect
+            activeNodes.forEach(node => {
+                try { node.stop && node.stop(); } catch (e) { /* ignore */ }
+                try { node.disconnect && node.disconnect(); } catch (e) { /* ignore */ }
+            });
+        } finally {
+            activeNodes = [];
+        }
+    }
 
     function engageQuiz() {
         // Initiate the quiz
@@ -11,6 +34,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get the selected checkboxes
         var selectedCheckboxes = document.querySelectorAll('input[type=checkbox]:checked');
         selectedOperations = Array.from(selectedCheckboxes).map(cb => cb.id);
+
+        // Guard: at least one operation must be selected
+        if (!selectedOperations || selectedOperations.length === 0) {
+            alert('Please select at least one operation before starting the quiz.');
+            return;
+        }
 
         // Allow negative numbers?
         allowNegatives = document.getElementById('includeNegatives').checked;
@@ -34,21 +63,23 @@ document.addEventListener('DOMContentLoaded', function() {
         displayQuestion(currentQuestion);
         displayAnswerInputField();
 
-        // Add event listener to the answer input field
+        // Add event listener to the answer input field (replace any existing handler)
         var answerInputField = document.getElementById('answer');
-        answerInputField.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent the default form submission behavior
-                checkAnswer();
-                answerInputField.value = ''; // Clear the answer input field
-            }
-        });
+        if (answerInputField) {
+            answerInputField.onkeypress = function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent the default form submission behavior
+                    checkAnswer();
+                    answerInputField.value = ''; // Clear the answer input field
+                }
+            };
+        }
     }
 
     function displayQuestion(question) {
         // Display the question on the page
         var questionContainer = document.getElementById('question-container');
-        if (questionContainer !== null) {
+        if (questionContainer !== null && question) {
             console.log('Displaying question...');
             questionContainer.innerHTML = question.questionString;
         }
@@ -63,6 +94,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function generateQuestion(selectedOperations, negativeAllowed) {
+        // Guard: if no operations selected, return a default message (but engageQuiz should prevent this)
+        if (!selectedOperations || selectedOperations.length === 0) {
+            return {
+                questionString: 'No operation selected',
+                answer: ''
+            };
+        }
+
         // Randomly select an operation from the selected checkboxes
         var randomIndex = Math.floor(Math.random() * selectedOperations.length);
         var selectedOperation = selectedOperations[randomIndex];
@@ -80,9 +119,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (selectedOperation === 'squareRoots') {
             return generateSquareRootQuestion(negativeAllowed);
         } else {
-            // Return a default question if no operation is selected
+            // Return a default question if an unknown operation is encountered
             return {
-                questionString: 'No operation selected',
+                questionString: 'Unknown operation selected',
                 answer: ''
             };
         }
@@ -91,20 +130,33 @@ document.addEventListener('DOMContentLoaded', function() {
     function checkAnswer() {
         // Implement the logic to check the user's answer
         console.log('Checking answer...');
+
         var answerInputField = document.getElementById('answer');
+        if (!answerInputField) {
+            alert('No answer field found. Please generate a question first.');
+            return;
+        }
+
+        if (!currentQuestion) {
+            alert('No question generated. Click "Generate Question(s)" to start.');
+            return;
+        }
+
         var userAnswer = answerInputField.value;
         var correctAnswer = currentQuestion.answer;
         var answerContainer = document.getElementById('answer-container');
 
-        // Play a three-tone sequence based on whether all answers are correct
-        const context = new (window.AudioContext || window.webkitAudioContext)();
+        // Stop any currently playing sounds before starting a new sequence
+        stopAllSound();
+        const context = ensureAudioContext();
+
         const duration_1 = 500; // Half a second
         const duration_2 = 1500; // 1.5 seconds
         const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
 
         if (userAnswer == correctAnswer) {
             alert('Correct!');
-            answerContainer.style.backgroundColor = 'green';
+            if (answerContainer) answerContainer.style.backgroundColor = 'green';
             numberOfQuestions--;
             if (numberOfQuestions > 0) {
                 currentQuestion = generateQuestion(selectedOperations, allowNegatives);
@@ -113,45 +165,103 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 alert('You have completed all questions!');
             }
-            // Four ascending tones forming an A-major triad (A4, C#5, E5) + A5 (one octave higher)
-            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
-            setTimeout(() => { playTone(context, 554.37, duration_1); }, delay); // C#5
-            setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 2); // E5
-            setTimeout(() => { playTone(context, 880, duration_2); }, delay * 3); // A5
+
+            // Play a short ascending sequence; ensure earlier sounds are stopped
+            playToneSequence([{
+                freq: 440,
+                dur: duration_1,
+                start: 0
+            }, {
+                freq: 554.37,
+                dur: duration_1,
+                start: delay
+            }, {
+                freq: 659.25,
+                dur: duration_1,
+                start: delay * 2
+            }, {
+                freq: 880,
+                dur: duration_2,
+                start: delay * 3
+            }], context);
         } else {
-            setTimeout(() => { playTone(context, 440, duration_1); }, 0); // A4
-            setTimeout(() => { playTone(context, 392, duration_1); }, delay); // G4
-            setTimeout(() => { playTone(context, 369.99, duration_2, true); }, delay * 2); // F4#
-            setTimeout(() => { answerContainer.style.backgroundColor = 'red'; }, delay * 5);
-            setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 5);
+            if (answerContainer) answerContainer.style.backgroundColor = 'red';
+
+            // Play an incorrect sequence
+            playToneSequence([{
+                freq: 440,
+                dur: duration_1,
+                start: 0
+            }, {
+                freq: 392,
+                dur: duration_1,
+                start: delay
+            }, {
+                freq: 369.99,
+                dur: duration_2,
+                start: delay * 2,
+                oscillate: true
+            }], context);
+
+            // Delay the alert so it doesn't interrupt the tone starting
+            setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 3);
         }
+    }
+
+    // Play a sequence of tones using the shared audio context. Stops previous sounds first.
+    function playToneSequence(sequence, context) {
+        if (!context) context = ensureAudioContext();
+        // stop previous nodes
+        stopAllSound();
+
+        sequence.forEach(item => {
+            setTimeout(() => {
+                playTone(context, item.freq, item.dur, !!item.oscillate);
+            }, item.start);
+        });
     }
 
     // Function to play a tone with a given frequency and duration, with optional oscillation
     function playTone(context, frequency, duration, oscillate = false) {
-        const oscillator = context.createOscillator();
-        oscillator.type = 'sine';
-        oscillator.frequency.value = frequency;
+        try {
+            const oscillator = context.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
 
-        if (oscillate) {
             const gain = context.createGain();
-            gain.gain.value = 30; // The amplitude of the oscillation
+            // Reasonable gain so volume isn't huge
+            gain.gain.value = 0.1;
 
-            const modulator = context.createOscillator();
-            modulator.type = 'sine';
-            modulator.frequency.value = 4; // The frequency of the oscillation
+            if (oscillate) {
+                const modulator = context.createOscillator();
+                modulator.type = 'sine';
+                modulator.frequency.value = 4; // The frequency of the oscillation
 
-            modulator.connect(gain.gain);
-            modulator.start();
+                // Connect modulator to the gain's gain param to modulate amplitude
+                modulator.connect(gain.gain);
+                modulator.start();
+                activeNodes.push(modulator);
 
-            oscillator.connect(gain);
-            gain.connect(context.destination);
-        } else {
-            oscillator.connect(context.destination);
+                oscillator.connect(gain);
+                gain.connect(context.destination);
+            } else {
+                oscillator.connect(gain);
+                gain.connect(context.destination);
+            }
+
+            oscillator.start();
+            // Keep track so we can stop it if a new sequence starts
+            activeNodes.push(oscillator);
+
+            // Schedule stop
+            setTimeout(() => {
+                try { oscillator.stop(); } catch (e) { /* ignore */ }
+                try { oscillator.disconnect(); } catch (e) { /* ignore */ }
+                try { gain.disconnect(); } catch (e) { /* ignore */ }
+            }, duration + 50);
+        } catch (e) {
+            console.warn('Audio play failed:', e);
         }
-
-        oscillator.start();
-        oscillator.stop(context.currentTime + duration / 1000);
     }
 
     // Expose functions to the global scope
@@ -245,11 +355,12 @@ function generateDivisionQuestion(allowNegatives) {
     let product1 = 0;
     let product2 = 1;
 
+    // Ensure we don't end up with both zeros (which would produce 0 ÷ 0)
     do {
         product1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
         product2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
     }
-    while (product2 === 0 && product1 === 0); // Ensure at least one of the products is not zero
+    while (product2 === 0 && product1 === 0);
 
     // Calculate the dividend and divisor
     const dividend = product1 * product2;
@@ -305,22 +416,48 @@ function generateSquareRootQuestion(allowNegatives) {
 }
 
 function playCelebratoryMusic() {
-    // Play celebratory music using the Web Audio API
-    // Four descending tones forming an A-major scale (A5, G#5, F#5, E5, D5, C#5, B4, A4)
-    // Play a three-tone sequence based on whether all answers are correct
-    const context = new (window.AudioContext || window.webkitAudioContext)();
+    // Stop anything currently playing first
+    stopAllSound();
+    const context = ensureAudioContext();
+
+    // Four descending tones forming an A-major scale
     const duration_1 = 500; // Half a second
     const duration_2 = 1500; // 1.5 seconds
     const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
 
-    setTimeout(() => { playTone(context, 880, duration_1); }, 0); // A5
-    setTimeout(() => { playTone(context, 830.61, duration_1); }, delay); // G#5
-    setTimeout(() => { playTone(context, 739.99, duration_1); }, delay * 2); // F#5
-    setTimeout(() => { playTone(context, 659.25, duration_1); }, delay * 3); // E5
-    setTimeout(() => { playTone(context, 587.33, duration_1); }, delay * 4); // D5
-    setTimeout(() => { playTone(context, 554.37, duration_1); }, delay * 5); // C#5
-    setTimeout(() => { playTone(context, 493.88, duration_1); }, delay * 6); // B4
-    setTimeout(() => { playTone(context, 440, duration_2); }, delay * 7); // A4
+    playToneSequence([{
+        freq: 880,
+        dur: duration_1,
+        start: 0
+    },{
+        freq: 830.61,
+        dur: duration_1,
+        start: delay
+    },{
+        freq: 739.99,
+        dur: duration_1,
+        start: delay * 2
+    },{
+        freq: 659.25,
+        dur: duration_1,
+        start: delay * 3
+    },{
+        freq: 587.33,
+        dur: duration_1,
+        start: delay * 4
+    },{
+        freq: 554.37,
+        dur: duration_1,
+        start: delay * 5
+    },{
+        freq: 493.88,
+        dur: duration_1,
+        start: delay * 6
+    },{
+        freq: 440,
+        dur: duration_2,
+        start: delay * 7
+    }], context);
 }
 
 function generateConfetti(delay_standard) {
