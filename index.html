@@ -20,13 +20,21 @@
         <label><input type="checkbox" name="operation" id="squares"> Squares</label>
         <label><input type="checkbox" name="operation" id="squareRoots"> Square Roots</label>
         <label><input type="checkbox" id="includeNegatives"> Include Negatives</label>
-        <label>Number of Questions: <input type="number" id="questionCount" value="50"></label>
+        <label>Number of Questions: <input type="number" id="questionCount" value="50" min="1"></label>
     </div>
 
-    <button onclick="engageQuiz()">Generate Question(s)</button>
-    <button onclick="checkAnswer()">Check Answer</button>
+    <div id="controls">
+        <button id="generateBtn" type="button">Generate Question(s)</button>
+        <button id="checkBtn" type="button">Check Answer</button>
 
-    <div id="question-container">
+        <label for="mute">Mute</label>
+        <input type="checkbox" id="mute" aria-label="Mute sounds">
+        <label for="volume">Volume</label>
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.1" aria-label="Volume control">
+        <button id="restartBtn" type="button" style="display:none;">Restart</button>
+    </div>
+
+    <div id="question-container" role="region" aria-live="polite">
         <!-- Dynamic content will be placed here -->
     </div>
     <div id="answer-container">
