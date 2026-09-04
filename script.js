@@ -4,20 +4,37 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedOperations = [];
     let currentQuestion = null;
 
-    // Simple audio manager to avoid overlapping sounds
+    // Audio manager
     let audioContext = null;
-    let activeNodes = []; // store oscillators and modulators so we can stop them
+    let masterGain = null;
+    let activeNodes = []; // oscillators/modulators
+    let scheduledTimeouts = []; // timeouts for scheduled play/stop
 
     function ensureAudioContext() {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // create a master gain node so mute/volume are global
+            masterGain = audioContext.createGain();
+            masterGain.gain.value = 0.1; // default volume
+            masterGain.connect(audioContext.destination);
         }
         return audioContext;
     }
 
+    function setMasterVolume(value) {
+        if (!masterGain) ensureAudioContext();
+        masterGain.gain.value = value;
+    }
+
     function stopAllSound() {
+        // clear timeouts
+        while (scheduledTimeouts.length) {
+            const id = scheduledTimeouts.shift();
+            try { clearTimeout(id); } catch (e) { /* ignore */ }
+        }
+
+        // stop active nodes
         try {
-            // Stop all active oscillators/modulators and disconnect
             activeNodes.forEach(node => {
                 try { node.stop && node.stop(); } catch (e) { /* ignore */ }
                 try { node.disconnect && node.disconnect(); } catch (e) { /* ignore */ }
@@ -28,6 +45,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function engageQuiz() {
+        // Ensure audio will be allowed in browsers that require a user gesture
+        const ctx = ensureAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => { /* ignore */ });
+        }
+
         // Initiate the quiz
         console.log('Engaging quiz...');
 
@@ -70,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     checkAnswer();
                 }
             };
-            // Focus the input so users can start typing immediately
             answerInputField.focus();
         }
     }
@@ -79,8 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Display the question on the page
         var questionContainer = document.getElementById('question-container');
         if (questionContainer !== null && question) {
-            console.log('Displaying question...');
-            questionContainer.innerHTML = question.questionString;
+            questionContainer.textContent = question.questionString;
         }
     }
 
@@ -88,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Display an input field for the user to enter their answer
         var answerInputField = document.getElementById('answer-container');
         if (answerInputField !== null) {
-            answerInputField.innerHTML = '<input type="text" id="answer" placeholder="Enter your answer...">';
+            answerInputField.innerHTML = '<input type="text" id="answer" placeholder="Enter your answer..." aria-label="Answer input">';
         }
     }
 
@@ -162,12 +183,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Normalize comparison so numbers and strings compare sensibly
         let isCorrect = false;
         if (typeof correctAnswer === 'number') {
-            // Accept numeric input that matches exactly
+            // Accept numeric input that matches with tolerance
             const parsed = Number(userAnswer);
-            isCorrect = !isNaN(parsed) && parsed === correctAnswer;
+            if (!isNaN(parsed)) {
+                isCorrect = Math.abs(parsed - correctAnswer) < 1e-6;
+            } else {
+                isCorrect = false;
+            }
         } else {
-            // Compare as trimmed strings
-            isCorrect = userAnswer === String(correctAnswer);
+            // Compare as trimmed, lowercased strings
+            isCorrect = userAnswer.toLowerCase() === String(correctAnswer).toLowerCase();
         }
 
         if (isCorrect) {
@@ -180,7 +205,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 answerInputField.value = '';
                 answerInputField.focus();
             } else {
-                alert('You have completed all questions!');
+                // celebration
+                playCelebratoryMusic();
+                generateConfetti(600);
+                // show restart button
+                var restartBtn = document.getElementById('restartBtn');
+                if (restartBtn) restartBtn.style.display = 'inline-block';
             }
 
             // Play a short ascending sequence; ensure earlier sounds are stopped
@@ -224,20 +254,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }], context);
 
             // Delay the alert so it doesn't interrupt the tone starting
-            setTimeout(() => { alert('Incorrect. The correct answer is ' + correctAnswer + '. Please try again!'); }, delay * 3);
+            setTimeout(() => { alert('Incorrect. The correct answer is ' + String(correctAnswer) + '. Please try again!'); }, delay * 3);
         }
     }
 
     // Play a sequence of tones using the shared audio context. Stops previous sounds first.
     function playToneSequence(sequence, context) {
         if (!context) context = ensureAudioContext();
-        // stop previous nodes
+        // stop previous nodes and clear scheduled timeouts
         stopAllSound();
 
         sequence.forEach(item => {
-            setTimeout(() => {
+            const id = setTimeout(() => {
                 playTone(context, item.freq, item.dur, !!item.oscillate);
             }, item.start);
+            scheduledTimeouts.push(id);
         });
     }
 
@@ -249,8 +280,8 @@ document.addEventListener('DOMContentLoaded', function() {
             oscillator.frequency.value = frequency;
 
             const gain = context.createGain();
-            // Reasonable gain so volume isn't huge
-            gain.gain.value = 0.1;
+            // per-tone gain controlled by masterGain
+            gain.gain.value = 1.0;
 
             if (oscillate) {
                 const modulator = context.createOscillator();
@@ -263,10 +294,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 activeNodes.push(modulator);
 
                 oscillator.connect(gain);
-                gain.connect(context.destination);
+                gain.connect(masterGain || context.destination);
             } else {
                 oscillator.connect(gain);
-                gain.connect(context.destination);
+                gain.connect(masterGain || context.destination);
             }
 
             oscillator.start();
@@ -274,222 +305,200 @@ document.addEventListener('DOMContentLoaded', function() {
             activeNodes.push(oscillator);
 
             // Schedule stop
-            setTimeout(() => {
+            const stopId = setTimeout(() => {
                 try { oscillator.stop(); } catch (e) { /* ignore */ }
                 try { oscillator.disconnect(); } catch (e) { /* ignore */ }
                 try { gain.disconnect(); } catch (e) { /* ignore */ }
             }, duration + 50);
+            scheduledTimeouts.push(stopId);
         } catch (e) {
             console.warn('Audio play failed:', e);
         }
     }
 
-    // Expose functions to the global scope
-    window.engageQuiz = engageQuiz;
-    window.checkAnswer = checkAnswer;
-});
+    function playCelebratoryMusic() {
+        // Stop anything currently playing first
+        stopAllSound();
+        const context = ensureAudioContext();
 
-function generateAdditionQuestion(allowNegatives) {
-    // Generate random numbers between -20 and 20 if allowNegatives is true
-    const minNum = allowNegatives ? -20 : 0;
-    const maxNum = 20;
-    const num1 = generateRandomNumber(minNum, maxNum);
-    const num2 = generateRandomNumber(minNum, maxNum);
+        // Four descending tones forming an A-major scale
+        const duration_1 = 500; // Half a second
+        const duration_2 = 1500; // 1.5 seconds
+        const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
 
-    // Create the question string
-    const questionString = `${num1} + ${num2}`;
-
-    // Calculate the answer
-    const answer = num1 + num2;
-
-    // Return an object with question and answer
-    return {
-        questionString: questionString,
-        answer: answer
-    };
-}
-
-function generateMultiplicationQuestion(allowNegatives) {
-    // Generate random numbers between -12 and 12 if allowNegatives is true
-    const minNum = allowNegatives ? -12 : 0;
-    const maxNum = 12;
-    const num1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-    const num2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-
-    // Create the question string
-    const questionString = `${num1} * ${num2}`;
-
-    // Calculate the answer
-    const answer = num1 * num2;
-
-    // Return an object with question and answer
-    return {
-        questionString: questionString,
-        answer: answer
-    };
-}
-
-function generateSquaringQuestion(allowNegatives) {
-    // Generate a random number between -12 and 12 if allowNegatives is true
-    const minNum = allowNegatives ? -12 : 0;
-    const maxNum = 12;
-    const num = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-
-    // Create the question string
-    const questionString = `${num}^2`;
-
-    // Calculate the answer
-    const answer = num * num;
-
-    // Return an object with question and answer
-    return {
-        questionString: questionString,
-        answer: answer
-    };
-}
-
-function generateSubtractionQuestion(allowNegatives) {
-    // Generate random numbers between -20 and 20 if allowNegatives is true
-    const minNum = allowNegatives ? -20 : 0;
-    const maxNum = 20;  
-    const num1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-    const num2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-
-    // Create the question string
-    const questionString = `${num1} - ${num2}`;
-
-    // Calculate the answer
-    const answer = num1 - num2;
-
-    // Return an object with question and answer
-    return {
-        questionString: questionString,
-        answer: answer
-    };
-}
-
-function generateDivisionQuestion(allowNegatives) {
-    // Generate random numbers between the products of -12 to 12 if allowNegatives is true
-    const minNum = allowNegatives ? -12 : 0;
-    const maxNum = 12;
-    let product1 = 0;
-    let product2 = 1;
-
-    // Ensure we don't end up with both zeros (which would produce 0 ÷ 0)
-    do {
-        product1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-        product2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        playToneSequence([{
+            freq: 880,
+            dur: duration_1,
+            start: 0
+        },{
+            freq: 830.61,
+            dur: duration_1,
+            start: delay
+        },{
+            freq: 739.99,
+            dur: duration_1,
+            start: delay * 2
+        },{
+            freq: 659.25,
+            dur: duration_1,
+            start: delay * 3
+        },{
+            freq: 587.33,
+            dur: duration_1,
+            start: delay * 4
+        },{
+            freq: 554.37,
+            dur: duration_1,
+            start: delay * 5
+        },{
+            freq: 493.88,
+            dur: duration_1,
+            start: delay * 6
+        },{
+            freq: 440,
+            dur: duration_2,
+            start: delay * 7
+        }], context);
     }
-    while (product2 === 0 && product1 === 0);
 
-    // Calculate the dividend and divisor
-    const dividend = product1 * product2;
-    const divisor = product2 !== 0 ? product2 : product1; // Ensure divisor is not zero
+    function generateConfetti(delay_standard) {
+        // Generate confetti using confetti-js
+        var confettiSettings = { target: 'my-canvas' };
+        var confetti = new ConfettiGenerator(confettiSettings);
+        confetti.render();
+        // clear confetti after the sequence and show restart button
+        const clearId = setTimeout(() => { try { confetti.clear(); } catch (e) { /* ignore */ } }, delay_standard * 9);
+        scheduledTimeouts.push(clearId);
+    }
 
-    // Create the question string
-    const questionString = `${dividend} ÷ ${divisor}`;
+    function restartQuiz() {
+        // Reset UI state
+        stopAllSound();
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) restartBtn.style.display = 'none';
+        const questionContainer = document.getElementById('question-container');
+        if (questionContainer) questionContainer.textContent = '';
+        const answerContainer = document.getElementById('answer-container');
+        if (answerContainer) answerContainer.textContent = '';
+        // Reset defaults
+        numberOfQuestions = parseInt(document.getElementById('questionCount')?.value) || 50;
+        currentQuestion = null;
+    }
 
-    // Calculate the answer
-    const answer = dividend / divisor;
+    function generateRandomNumber(min, max) {
+        // Generate a random number between min and max (inclusive)
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
 
-    // Return an object with question and answer
-    return {
-        questionString: questionString,
-        answer: answer
-    };
-}
+    // Question generators
+    function generateAdditionQuestion(allowNegatives) {
+        const minNum = allowNegatives ? -20 : 0;
+        const maxNum = 20;
+        const num1 = generateRandomNumber(minNum, maxNum);
+        const num2 = generateRandomNumber(minNum, maxNum);
+        return { questionString: `${num1} + ${num2}`, answer: num1 + num2 };
+    }
 
-function generateSquareRootQuestion(allowNegatives) {
-    // Generate a random number between 0 and 12
-    const maxNum = 12;
-    const num = Math.floor(Math.random() * (maxNum + 1))
-    let questionString = ''
-    let answer = ''
+    function generateMultiplicationQuestion(allowNegatives) {
+        const minNum = allowNegatives ? -12 : 0;
+        const maxNum = 12;
+        const num1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        const num2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        return { questionString: `${num1} * ${num2}`, answer: num1 * num2 };
+    }
 
-    // Calculate the square and create the question and answer strings
-    // Only let the answer be imaginary SOMETIMES
-    if (allowNegatives) {
-        const imaginary_chance = Math.random();
-        if (imaginary_chance > 0.5) {
-            const square = num * num * -1;
-            questionString = `√${square}`;
-            answer = `${num}i`;
+    function generateSquaringQuestion(allowNegatives) {
+        const minNum = allowNegatives ? -12 : 0;
+        const maxNum = 12;
+        const num = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        return { questionString: `${num}^2`, answer: num * num };
+    }
+
+    function generateSubtractionQuestion(allowNegatives) {
+        const minNum = allowNegatives ? -20 : 0;
+        const maxNum = 20;  
+        const num1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        const num2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        return { questionString: `${num1} - ${num2}`, answer: num1 - num2 };
+    }
+
+    function generateDivisionQuestion(allowNegatives) {
+        const minNum = allowNegatives ? -12 : 0;
+        const maxNum = 12;
+        let product1 = 0;
+        let product2 = 1;
+
+        // Ensure we don't end up with both zeros (which would produce 0 ÷ 0)
+        do {
+            product1 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+            product2 = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+        }
+        while (product2 === 0 && product1 === 0);
+
+        const dividend = product1 * product2;
+        const divisor = product2 !== 0 ? product2 : product1; // Ensure divisor is not zero
+        const raw = dividend / divisor;
+        // If raw is an integer, keep it as Number; otherwise keep Number (comparison toleranced)
+        return { questionString: `${dividend} ÷ ${divisor}`, answer: raw };
+    }
+
+    function generateSquareRootQuestion(allowNegatives) {
+        const maxNum = 12;
+        const num = Math.floor(Math.random() * (maxNum + 1));
+        let questionString = '';
+        let answer = '';
+
+        if (allowNegatives) {
+            const imaginary_chance = Math.random();
+            if (imaginary_chance > 0.5) {
+                const square = num * num * -1;
+                questionString = `√${square}`;
+                answer = `${num}i`; // imaginary as string
+            }
+            else {
+                const square = num * num;
+                questionString = `√${square}`;
+                answer = num; // numeric
+            }
         }
         else {
             const square = num * num;
             questionString = `√${square}`;
-            answer = `${num}`;
+            answer = num; // numeric
         }
-        
-    }
-    else {
-        const square = num * num;
-        questionString = `√${square}`;
-        answer = String(num);
+
+        return { questionString, answer };
     }
 
-    // Return an object with question and answer
-    return {
-        questionString: questionString,
-        answer: answer
-    };
-}
+    // Wire up controls
+    const generateBtn = document.getElementById('generateBtn');
+    const checkBtn = document.getElementById('checkBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const muteCheckbox = document.getElementById('mute');
+    const volumeSlider = document.getElementById('volume');
 
-function playCelebratoryMusic() {
-    // Stop anything currently playing first
-    stopAllSound();
-    const context = ensureAudioContext();
+    if (generateBtn) generateBtn.addEventListener('click', engageQuiz);
+    if (checkBtn) checkBtn.addEventListener('click', checkAnswer);
+    if (restartBtn) restartBtn.addEventListener('click', restartQuiz);
 
-    // Four descending tones forming an A-major scale
-    const duration_1 = 500; // Half a second
-    const duration_2 = 1500; // 1.5 seconds
-    const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
+    if (muteCheckbox) {
+        muteCheckbox.addEventListener('change', function () {
+            if (muteCheckbox.checked) setMasterVolume(0);
+            else setMasterVolume(Number(volumeSlider?.value || 0.1));
+        });
+    }
 
-    playToneSequence([{
-        freq: 880,
-        dur: duration_1,
-        start: 0
-    },{
-        freq: 830.61,
-        dur: duration_1,
-        start: delay
-    },{
-        freq: 739.99,
-        dur: duration_1,
-        start: delay * 2
-    },{
-        freq: 659.25,
-        dur: duration_1,
-        start: delay * 3
-    },{
-        freq: 587.33,
-        dur: duration_1,
-        start: delay * 4
-    },{
-        freq: 554.37,
-        dur: duration_1,
-        start: delay * 5
-    },{
-        freq: 493.88,
-        dur: duration_1,
-        start: delay * 6
-    },{
-        freq: 440,
-        dur: duration_2,
-        start: delay * 7
-    }], context);
-}
+    if (volumeSlider) {
+        volumeSlider.addEventListener('input', function () {
+            if (muteCheckbox && muteCheckbox.checked) return;
+            setMasterVolume(Number(volumeSlider.value));
+        });
+        // initialize master volume
+        setMasterVolume(Number(volumeSlider.value || 0.1));
+    }
 
-function generateConfetti(delay_standard) {
-    // Generate confetti using confetti-js
-    var confettiSettings = { target: 'my-canvas' };
-    var confetti = new ConfettiGenerator(confettiSettings);
-    confetti.render();
-    setTimeout(() => { confetti.clear(); }, delay_standard * 9);
-    setTimeout(() => { location.reload(); }, delay_standard * 9);
-}
-
-function generateRandomNumber(min, max) {
-    // Generate a random number between min and max (inclusive)
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+    // Expose functions to the global scope for backward compatibility
+    window.engageQuiz = engageQuiz;
+    window.checkAnswer = checkAnswer;
+    window.restartQuiz = restartQuiz;
+});
