@@ -147,6 +147,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function isImagString(s) {
+        return typeof s === 'string' && /i$/i.test(s.trim());
+    }
+
+    function normalizeImagString(s) {
+        if (s === null || s === undefined) return '';
+        let str = String(s).trim().toLowerCase();
+        // remove spaces and asterisks
+        str = str.replace(/\s+/g, '').replace(/\*/g, '');
+        if (!str.endsWith('i')) return str;
+        let prefix = str.slice(0, -1); // part before i
+        if (prefix === '' || prefix === '+') prefix = '1';
+        if (prefix === '-') prefix = '-1';
+        // remove leading +
+        if (prefix.startsWith('+')) prefix = prefix.slice(1);
+        // coerce numeric formatting
+        let num = Number(prefix);
+        if (!isNaN(num)) {
+            // if integer, keep as integer string
+            if (Number.isInteger(num)) prefix = String(num);
+            else prefix = String(num);
+        }
+        return prefix + 'i';
+    }
+
     function checkAnswer() {
         // Implement the logic to check the user's answer
         console.log('Checking answer...');
@@ -191,8 +216,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 isCorrect = false;
             }
         } else {
-            // Compare as trimmed, lowercased strings
-            isCorrect = userAnswer.toLowerCase() === String(correctAnswer).toLowerCase();
+            // special-case imaginary answers to accept 'i' == '1i'
+            if (isImagString(correctAnswer) || isImagString(userAnswer)) {
+                const normUser = normalizeImagString(userAnswer);
+                const normCorrect = normalizeImagString(correctAnswer);
+                isCorrect = normUser === normCorrect;
+            } else {
+                // Compare as trimmed, lowercased strings for general cases
+                isCorrect = userAnswer.toLowerCase() === String(correctAnswer).toLowerCase();
+            }
         }
 
         if (isCorrect) {
@@ -326,39 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const duration_2 = 1500; // 1.5 seconds
         const delay = 600; // Slightly longer than the duration to ensure the tones don't overlap
 
-        playToneSequence([{
-            freq: 880,
-            dur: duration_1,
-            start: 0
-        },{
-            freq: 830.61,
-            dur: duration_1,
-            start: delay
-        },{
-            freq: 739.99,
-            dur: duration_1,
-            start: delay * 2
-        },{
-            freq: 659.25,
-            dur: duration_1,
-            start: delay * 3
-        },{
-            freq: 587.33,
-            dur: duration_1,
-            start: delay * 4
-        },{
-            freq: 554.37,
-            dur: duration_1,
-            start: delay * 5
-        },{
-            freq: 493.88,
-            dur: duration_1,
-            start: delay * 6
-        },{
-            freq: 440,
-            dur: duration_2,
-            start: delay * 7
-        }], context);
+        playToneSequence([{...{freq:880,dur:duration_1,start:0}},{...{freq:830.61,dur:duration_1,start:delay}},{...{freq:739.99,dur:duration_1,start:delay*2}},{...{freq:659.25,dur:duration_1,start:delay*3}},{...{freq:587.33,dur:duration_1,start:delay*4}},{...{freq:554.37,dur:duration_1,start:delay*5}},{...{freq:493.88,dur:duration_1,start:delay*6}},{...{freq:440,dur:duration_2,start:delay*7}}], context);
     }
 
     function generateConfetti(delay_standard) {
